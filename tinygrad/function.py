@@ -38,16 +38,11 @@ class Reciprocal(Function):
 
 class Sin(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
-    # normalize x with analogue of math.fmod 2*pi, the double cast is to get the floor
-    x =  x.e(BinaryOps.SUB, x.e(BinaryOps.DIV, x.const(math.pi*2)).cast(dtypes.int).cast(x.dtype).e(BinaryOps.MUL, x.const(math.pi*2)))
-    self.ret = acc = x
-    for i in range(1, 13):
-      acc = acc.e(UnaryOps.NEG).e(BinaryOps.MUL, x).e(BinaryOps.MUL, x)
-      self.ret = self.ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, x.const(math.factorial(2*i + 1))))
-    return self.ret
+    self.x = x
+    return x.e(UnaryOps.SIN)
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer:
-    return grad_output.e(BinaryOps.MUL, self.ret.const(1).e(BinaryOps.SUB, self.ret.e(BinaryOps.MUL, self.ret)).e(UnaryOps.SQRT))
+    return self.x.const(math.pi / 2).e(BinaryOps.SUB, self.x).e(UnaryOps.SIN).e(BinaryOps.MUL, grad_output)
 
 # NOTE: maximum(x, 0) behaves differently where x=0
 class Relu(Function):
@@ -81,10 +76,7 @@ class Log(Function):
 
 class Exp(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
-    self.ret = acc = x.const(1)
-    for i in range(1, 20):
-      acc = acc.e(BinaryOps.MUL, x)
-      self.ret = self.ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, x.const(math.factorial(i))))
+    self.ret = x.e(BinaryOps.MUL, x.const(1/math.log(2))).e(UnaryOps.EXP2)
     return self.ret
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer: return self.ret.e(BinaryOps.MUL, grad_output)
@@ -102,11 +94,7 @@ class Sqrt(Function):
 # TODO: have the backend automatically find this
 class Sigmoid(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
-    self.ret = acc = x.const(1)
-    for i in range(1, 20):
-      acc = acc.e(BinaryOps.MUL, x)
-      self.ret = self.ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, x.const(math.factorial(i))))
-    self.ret = x.const(1).e(BinaryOps.DIV, x.const(1).e(BinaryOps.ADD, x.const(1).e(BinaryOps.DIV,  self.ret)))
+    self.ret = x.const(1).e(BinaryOps.DIV, x.const(1).e(BinaryOps.ADD, x.e(BinaryOps.MUL, x.const(-1/math.log(2))).e(UnaryOps.EXP2)))
     return self.ret
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer:
