@@ -45,7 +45,7 @@ class Sin(Function):
     if x.dtype == dtypes.float64:
       self.precision = 25
     elif x.dtype == dtypes.float32:
-      self.precision = 20
+      self.precision = 14
     for i in range(1, self.precision):
       acc = acc.e(UnaryOps.NEG).e(BinaryOps.MUL, self.x).e(BinaryOps.MUL, self.x)
       ret = ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, self.x.const(math.factorial(2*i + 1))))
