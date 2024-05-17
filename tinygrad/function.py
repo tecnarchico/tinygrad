@@ -38,17 +38,19 @@ class Reciprocal(Function):
 
 class Sin(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
-    # normalize x with analogue of math.fmod 2*pi, the double cast is to get the floor
+    # normalize x with analogue of math.fmod(x, 2*pi), the double cast is to get the floor
     self.x =  x.e(BinaryOps.SUB, x.e(BinaryOps.DIV, x.const(math.pi*2)).cast(dtypes.int).cast(x.dtype).e(BinaryOps.MUL, x.const(math.pi*2)))
     ret = acc = self.x
-    for i in range(1, 13):
+    self.precision = 13
+    if x.dtype == dtypes.float64: prexision = 25
+    for i in range(1, self.precision):
       acc = acc.e(UnaryOps.NEG).e(BinaryOps.MUL, self.x).e(BinaryOps.MUL, self.x)
       ret = ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, self.x.const(math.factorial(2*i + 1))))
     return ret
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer:
     ret = acc = self.x.const(1)
-    for i in range(1, 13):
+    for i in range(1, self.precision):
       acc = acc.e(UnaryOps.NEG).e(BinaryOps.MUL, self.x).e(BinaryOps.MUL, self.x)
       ret = ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, self.x.const(math.factorial(2*i))))
     return grad_output.e(BinaryOps.MUL, ret)
