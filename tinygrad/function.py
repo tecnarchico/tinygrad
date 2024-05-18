@@ -42,7 +42,7 @@ class Sin(Function):
     y = x#.cast(dtypes.float64)
     y = y.e(BinaryOps.SUB, y.e(BinaryOps.DIV, y.const(math.pi*2)).cast(dtypes.int).cast(y.dtype).e(BinaryOps.MUL, y.const(math.pi*2)))
     self.x = ret = acc = y.cast(x.dtype)
-    self.precision = 20
+    self.precision = 14
     #if x.dtype == dtypes.float64:
     #   self.precision = 25
     for i in range(1, self.precision):
