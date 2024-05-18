@@ -40,7 +40,7 @@ class Sin(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
     # normalize x with analogue of math.fmod(x, 2*pi), the double cast is to get the floor
     r = x.e(BinaryOps.DIV, x.const(math.pi*2))
-    self.x = ret = acc = r.e(BinaryOps.SUB, r.cast(dtypes.int)).e(BinaryOps.MUL, r.const(math.pi*2))
+    self.x = ret = acc = r.e(BinaryOps.SUB, r.cast(dtypes.int).cast(dtypes.x)).e(BinaryOps.MUL, r.const(math.pi*2))
     self.precision = 14
     #if x.dtype == dtypes.float64:
     #   self.precision = 25
