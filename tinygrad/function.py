@@ -41,7 +41,7 @@ class Sin(Function):
     # normalize x with analogue of math.fmod(x, 2*pi), the double cast is to get the floor
     X = x.cast(dtypes.float64)
     DIV = X.e(BinaryOps.DIV, X.const(2*math.pi))
-    INT = DIV.cast(dtypes.int32).cast(X.dtype)
+    INT = DIV.cast(dtypes.int64).cast(X.dtype)
     FRAC = DIV.e(BinaryOps.SUB, INT)
     SHIFT = FRAC.e(BinaryOps.MUL, X.const(2*math.pi))
     self.x = ret = acc = SHIFT.cast(x.dtype)
