@@ -39,8 +39,21 @@ class Reciprocal(Function):
 class Sin(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
     # normalize x with analogue of math.fmod(x, 2*pi), the double cast is to get the floor
-    r = x.cast(dtypes.float64).e(BinaryOps.DIV, x.const(math.pi*2))
-    self.x = ret = acc = r.e(BinaryOps.SUB, r.cast(dtypes.int).cast(dtypes.float64)).e(BinaryOps.MUL, r.const(math.pi*2))
+
+    X = x.cast(dtypes.float64)
+    
+    DIV = X.e(BinaryOps.DIV, X.const(2*math.pi))  # .div(2*math.pi)
+
+    INT = DIV.cast(dtypes.int32).cast(X.dtype) # TODO where DIV.floor()
+
+    FRAC = DIV.e(BinaryOps.SUB, INT) # DIV.sub(INT)
+
+    SHIFT = FRAC.e(BinaryOps.MUL, X.const(2*math.pi)) # FRAC.mul(2*math.pi)
+
+    self.x = ret = acc = SHIFT.cast(x.dtype)
+
+    # r = x.cast(dtypes.float64).e(BinaryOps.DIV, x.const(math.pi*2))
+    # self.x = ret = acc = r.e(BinaryOps.SUB, r.cast(dtypes.int).cast(dtypes.float64)).e(BinaryOps.MUL, r.const(math.pi*2))
     self.precision = 14
     #if x.dtype == dtypes.float64:
     #   self.precision = 25
