@@ -82,7 +82,7 @@ class Exp(Function):
                   k.e(BinaryOps.CMPLT, x.const(-i)).e(TernaryOps.WHERE, int_ret.e(BinaryOps.DIV, x.const(2)), int_ret),
                   k.const(i).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE, int_ret.e(BinaryOps.MUL, x.const(2)), int_ret))
     self.ret = frac_ret.e(BinaryOps.MUL, int_ret)
-    return self.ret 
+    return self.ret
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer: return self.ret.e(BinaryOps.MUL, grad_output)
 
