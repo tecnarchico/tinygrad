@@ -78,7 +78,7 @@ class Exp(Function):
       frac_ret = frac_ret.e(BinaryOps.ADD, term.e(BinaryOps.DIV, x.const(math.factorial(i))))
     int_ret = x.const(1)
     for i in range(11):
-        int_ret = k.e(BinaryOps.CMPLT, x.const(0)).e(TernaryOps.WHERE,
+      int_ret = k.e(BinaryOps.CMPLT, x.const(0)).e(TernaryOps.WHERE,
                   k.e(BinaryOps.CMPLT, x.const(-i)).e(TernaryOps.WHERE, int_ret.e(BinaryOps.DIV, x.const(2)), int_ret),
                   k.const(i).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE, int_ret.e(BinaryOps.MUL, x.const(2)), int_ret))
     self.ret = frac_ret.e(BinaryOps.MUL, int_ret)
