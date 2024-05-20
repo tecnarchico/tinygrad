@@ -62,12 +62,27 @@ class Log(Function):
 
 class Exp(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
-    self.ret = acc = x.const(1)
-    for i in range(1, 20):
-      acc = acc.e(BinaryOps.MUL, x)
-      self.ret = self.ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, x.const(math.factorial(i))))
-    # self.ret = x.e(BinaryOps.MUL, x.const(1/math.log(2))).e(UnaryOps.EXP2)
-    return self.ret
+    # k = int(x / math.log(2))  # k is the integer part
+    # f = x - k * math.log(2)   # f is the fractional part
+    # exp_f = 1 + f + f**2 / 2 + f**3 / 6  + ... # Taylor series expansion
+    # return exp_f * (1 << k) if k >= 0 else exp_f / (1 << -k)
+    ftype, itype = (x.dtype if x.device != 'METAL' else x.dtype), (dtypes.int32 if x.device != 'METAL' else dtypes.int32)
+    k = x.cast(ftype).e(BinaryOps.DIV, x.const(math.log(2))).cast(itype).cast(ftype)
+    f = x.e(BinaryOps.SUB, k.e(BinaryOps.MUL, x.const(math.log(2)))).cast(x.dtype)
+    self.precision = 14
+    #if x.dtype == dtypes.float64:
+    #   self.precision = 25
+    frac_ret = term = x.const(1)
+    for i in range(1, self.precision):
+      term = term.e(BinaryOps.MUL, f)
+      frac_ret = frac_ret.e(BinaryOps.ADD, term.e(BinaryOps.DIV, x.const(math.factorial(i))))
+    int_ret = x.const(1)
+    for i in range(11):
+        int_ret = k.e(BinaryOps.CMPLT, x.const(0)).e(TernaryOps.WHERE,
+                  k.e(BinaryOps.CMPLT, x.const(-i)).e(TernaryOps.WHERE, int_ret.e(BinaryOps.DIV, x.const(2)), int_ret),
+                  k.const(i).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE, int_ret.e(BinaryOps.MUL, x.const(2)), int_ret))
+    self.ret = frac_ret.e(BinaryOps.MUL, int_ret)
+    return self.ret 
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer: return self.ret.e(BinaryOps.MUL, grad_output)
 
