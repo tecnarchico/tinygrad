@@ -62,7 +62,11 @@ class Log(Function):
 
 class Exp(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
-    self.ret = x.e(BinaryOps.MUL, x.const(1/math.log(2))).e(UnaryOps.EXP2)
+    self.ret = acc = x.const(1)
+    for i in range(1, 20):
+      acc = acc.e(BinaryOps.MUL, x)
+      self.ret = self.ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, x.const(math.factorial(i))))
+    # self.ret = x.e(BinaryOps.MUL, x.const(1/math.log(2))).e(UnaryOps.EXP2)
     return self.ret
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer: return self.ret.e(BinaryOps.MUL, grad_output)
