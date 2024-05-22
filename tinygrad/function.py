@@ -62,26 +62,20 @@ class Log(Function):
 
 class Exp(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
-    # k = int(x / math.log(2))  # k is the integer part
-    # f = x - k * math.log(2)   # f is the fractional part
-    # exp_f = 1 + f + f**2 / 2 + f**3 / 6  + ... # Taylor series expansion
-    # return exp_f * (1 << k) if k >= 0 else exp_f / (1 << -k)
-    ftype, itype = (x.dtype if x.device != 'METAL' else x.dtype), (dtypes.int32 if x.device != 'METAL' else dtypes.int32)
-    k = x.cast(ftype).e(BinaryOps.DIV, x.const(math.log(2))).cast(itype).cast(ftype)
-    f = x.e(BinaryOps.SUB, k.e(BinaryOps.MUL, x.const(math.log(2)))).cast(x.dtype)
+    # self.ret = x.e(BinaryOps.MUL, x.const(1/math.log(2))).e(UnaryOps.EXP2)
+    MAX_SHIFT = 31
+    ftype, itype = (x.dtype if x.device != 'METAL' else x.dtype), (dtypes.int64 if x.device != 'METAL' else dtypes.int32)
+    k = x.cast(ftype).e(BinaryOps.DIV, x.const(math.log(2))).cast(itype)
+    f = x.e(BinaryOps.SUB, k.cast(ftype).e(BinaryOps.MUL, x.const(math.log(2)))).cast(x.dtype)
     self.precision = 14
-    #if x.dtype == dtypes.float64:
-    #   self.precision = 25
     frac_ret = term = x.const(1)
     for i in range(1, self.precision):
       term = term.e(BinaryOps.MUL, f)
       frac_ret = frac_ret.e(BinaryOps.ADD, term.e(BinaryOps.DIV, x.const(math.factorial(i))))
-    int_ret = x.const(1)
-    for i in range(11):
-      int_ret = k.e(BinaryOps.CMPLT, x.const(0)).e(TernaryOps.WHERE,
-                  k.e(BinaryOps.CMPLT, x.const(-i)).e(TernaryOps.WHERE, int_ret.e(BinaryOps.DIV, x.const(2)), int_ret),
-                  k.const(i).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE, int_ret.e(BinaryOps.MUL, x.const(2)), int_ret))
-    self.ret = frac_ret.e(BinaryOps.MUL, int_ret)
+    abs_k = k.e(BinaryOps.CMPLT, k.const(0)).e(TernaryOps.WHERE, k.e(UnaryOps.NEG), k)
+    l = k.const(MAX_SHIFT).e(BinaryOps.CMPLT, k.e(UnaryOps.NEG)).e(TernaryOps.WHERE, x.const(0), frac_ret.e(BinaryOps.DIV, k.const(1).e(BinaryOps.LSHIFT, abs_k).cast(x.dtype)))
+    r = k.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE, x.const(float('inf')), frac_ret.e(BinaryOps.MUL, k.const(1).e(BinaryOps.LSHIFT, abs_k).cast(x.dtype)))
+    self.ret = k.e(BinaryOps.CMPLT, k.const(0)).e(TernaryOps.WHERE, l, r)
     return self.ret
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer: return self.ret.e(BinaryOps.MUL, grad_output)
