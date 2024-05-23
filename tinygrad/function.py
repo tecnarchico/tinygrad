@@ -38,11 +38,37 @@ class Reciprocal(Function):
 
 class Sin(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
-    self.x = x
-    return x.e(UnaryOps.SIN)
+    # normalize x with analogue of math.fmod(x, 2*pi), the double cast is to get the floor
+    # todo where for negative numbers
+    if x.device != 'METAL':
+      X = x.cast(dtypes.float64)
+      DIV = X.e(BinaryOps.DIV, X.const(2*math.pi))
+      INT = DIV.cast(dtypes.int64).cast(dtypes.float64)
+      FRAC = DIV.e(BinaryOps.SUB, INT)
+      SHIFT = FRAC.e(BinaryOps.MUL, X.const(2*math.pi))
+      x = SHIFT.cast(x.dtype)
+    else:
+      X = x
+      DIV = X.e(BinaryOps.DIV, X.const(2*math.pi))
+      INT = DIV.cast(dtypes.int).cast(x.dtype)
+      FRAC = DIV.e(BinaryOps.SUB, INT)
+      SHIFT = FRAC.e(BinaryOps.MUL, X.const(2*math.pi))
+      x = SHIFT
+    self.x = ret = acc = x
+    self.precision = 14
+    #if x.dtype == dtypes.float64:
+    #   self.precision = 25
+    for i in range(1, self.precision):
+      acc = acc.e(UnaryOps.NEG).e(BinaryOps.MUL, self.x).e(BinaryOps.MUL, self.x)
+      ret = ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, self.x.const(math.factorial(2*i + 1))))
+    return ret
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer:
-    return self.x.const(math.pi / 2).e(BinaryOps.SUB, self.x).e(UnaryOps.SIN).e(BinaryOps.MUL, grad_output)
+    ret = acc = self.x.const(1)
+    for i in range(1, self.precision):
+      acc = acc.e(UnaryOps.NEG).e(BinaryOps.MUL, self.x).e(BinaryOps.MUL, self.x)
+      ret = ret.e(BinaryOps.ADD, acc.e(BinaryOps.DIV, self.x.const(math.factorial(2*i))))
+    return grad_output.e(BinaryOps.MUL, ret)
 
 # NOTE: maximum(x, 0) behaves differently where x=0
 class Relu(Function):
