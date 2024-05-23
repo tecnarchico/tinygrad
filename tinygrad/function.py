@@ -75,7 +75,7 @@ class Exp(Function):
     abs_k = k.e(BinaryOps.CMPLT, k.const(0)).e(TernaryOps.WHERE, k.e(UnaryOps.NEG), k)
     l = k.const(MAX_SHIFT).e(BinaryOps.CMPLT, k.e(UnaryOps.NEG)).e(TernaryOps.WHERE, x.const(0),
                                       frac_ret.e(BinaryOps.DIV, k.const(1).e(BinaryOps.LSHIFT, abs_k).cast(x.dtype)))
-    r = k.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE, x.const(float('inf')),
+    r = k.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE, x.const(math.inf),
                                       frac_ret.e(BinaryOps.MUL, k.const(1).e(BinaryOps.LSHIFT, abs_k).cast(x.dtype)))
     self.ret = k.e(BinaryOps.CMPLT, k.const(0)).e(TernaryOps.WHERE, l, r)
     return self.ret
