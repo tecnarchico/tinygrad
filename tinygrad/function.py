@@ -64,9 +64,10 @@ class Exp(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
     # self.ret = x.e(BinaryOps.MUL, x.const(1/math.log(2))).e(UnaryOps.EXP2)
     MAX_SHIFT = 31
+    MIN_SHIFT = -31
     k = x.e(BinaryOps.DIV, x.const(math.log(2)))
-    k = k.e(BinaryOps.CMPLT, x.const(-MAX_SHIFT)).e(TernaryOps.WHERE,  x.const(-MAX_SHIFT-1), k)
-    k = x.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE,  x.const(MAX_SHIFT), k)
+    k = k.e(BinaryOps.CMPLT, x.const(MIN_SHIFT)).e(TernaryOps.WHERE,  x.const(MIN_SHIFT-1), k)
+    k = x.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE,  x.const(MAX_SHIFT+1), k)
     k = k.cast(dtypes.int)
     f = x.e(BinaryOps.SUB, k.cast(x.dtype).e(BinaryOps.MUL, x.const(math.log(2))))
     self.precision = 14
@@ -75,7 +76,7 @@ class Exp(Function):
       term = term.e(BinaryOps.MUL, f)
       frac_ret = frac_ret.e(BinaryOps.ADD, term.e(BinaryOps.DIV, x.const(math.factorial(i))))
     abs_k = k.e(BinaryOps.CMPLT, k.const(0)).e(TernaryOps.WHERE, k.e(UnaryOps.NEG), k)
-    l = k.const(MAX_SHIFT).e(BinaryOps.CMPLT, k.e(UnaryOps.NEG)).e(TernaryOps.WHERE, x.const(0),
+    l = k.e(BinaryOps.CMPLT, k.const(MIN_SHIFT)).e(TernaryOps.WHERE, x.const(0),
                                       frac_ret.e(BinaryOps.DIV, k.const(1).e(BinaryOps.LSHIFT, abs_k).cast(x.dtype)))
     r = k.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE, x.const(math.inf),
                                       frac_ret.e(BinaryOps.MUL, k.const(1).e(BinaryOps.LSHIFT, abs_k).cast(x.dtype)))
