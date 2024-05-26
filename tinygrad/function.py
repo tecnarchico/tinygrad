@@ -66,7 +66,7 @@ class Exp(Function):
     MAX_SHIFT = 31
     k = x.e(BinaryOps.DIV, x.const(math.log(2)))
     k = k.e(BinaryOps.CMPLT, x.const(-MAX_SHIFT)).e(TernaryOps.WHERE,  x.const(-MAX_SHIFT-1), k)
-    k = x.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE,  x.const(MAX_SHIFT), k) 
+    k = x.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE,  x.const(MAX_SHIFT), k)
     k = k.cast(dtypes.int)
     f = x.e(BinaryOps.SUB, k.cast(x.dtype).e(BinaryOps.MUL, x.const(math.log(2))))
     self.precision = 14
