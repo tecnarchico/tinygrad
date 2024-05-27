@@ -64,7 +64,6 @@ class Exp(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
     # self.ret = x.e(BinaryOps.MUL, x.const(1/math.log(2))).e(UnaryOps.EXP2)
     MAX_SHIFT = 62 if x.dtype is dtypes.float64 else 14 if x.dtype is dtypes.float16 else 30
-    MAX_SHIFT = 31
     MIN_SHIFT = -MAX_SHIFT
     k = x.e(BinaryOps.DIV, x.const(math.log(2)))
     k = k.e(BinaryOps.CMPLT, x.const(MIN_SHIFT)).e(TernaryOps.WHERE,  x.const(MIN_SHIFT-1), k)
