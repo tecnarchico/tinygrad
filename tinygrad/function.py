@@ -70,15 +70,15 @@ class Exp(Function):
     k = x.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE,  x.const(MAX_SHIFT+1), k)
     k = k.cast(dtypes.int)
     abs_k = k.e(BinaryOps.CMPLT, k.const(0)).e(TernaryOps.WHERE, k.e(UnaryOps.NEG), k)
-    pow = k.const(1).e(BinaryOps.LSHIFT, abs_k).cast(x.dtype)
-    pow = abs_k.const(MAX_SHIFT).e(BinaryOps.CMPLT, abs_k).e(TernaryOps.WHERE, x.const(math.inf), pow)
-    f = x.e(BinaryOps.SUB, k.cast(x.dtype).e(BinaryOps.MUL, x.const(math.log(2))))
-    frac_ret = term = x.const(1)
+    k_pow = k.const(1).e(BinaryOps.LSHIFT, abs_k).cast(x.dtype)
+    k_pow = abs_k.const(MAX_SHIFT).e(BinaryOps.CMPLT, abs_k).e(TernaryOps.WHERE, x.const(math.inf), k_pow)
+    y = x.e(BinaryOps.SUB, k.cast(x.dtype).e(BinaryOps.MUL, x.const(math.log(2))))
+    y_exp = term = x.const(1)
     for i in range(1, 14):
-      term = term.e(BinaryOps.MUL, f)
-      frac_ret = frac_ret.e(BinaryOps.ADD, term.e(BinaryOps.DIV, x.const(math.factorial(i))))
-    l = x.e(BinaryOps.CMPEQ, x.const(-math.inf)).e(TernaryOps.WHERE, x.const(0), frac_ret.e(BinaryOps.DIV, pow))
-    self.ret = x.e(BinaryOps.CMPLT, x.const(0)).e(TernaryOps.WHERE, l, frac_ret.e(BinaryOps.MUL, pow))
+      term = term.e(BinaryOps.MUL, y)
+      y_exp = y_exp.e(BinaryOps.ADD, term.e(BinaryOps.MUL, x.const(1/math.factorial(i))))
+    l = x.e(BinaryOps.CMPEQ, x.const(-math.inf)).e(TernaryOps.WHERE, x.const(0), y_exp.e(BinaryOps.DIV, k_pow))
+    self.ret = x.e(BinaryOps.CMPLT, x.const(0)).e(TernaryOps.WHERE, l, y_exp.e(BinaryOps.MUL, k_pow))
     return self.ret
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer: return self.ret.e(BinaryOps.MUL, grad_output)
