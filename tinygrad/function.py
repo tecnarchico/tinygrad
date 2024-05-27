@@ -62,7 +62,23 @@ class Log(Function):
 
 class Exp(Function):
   def forward(self, x:LazyBuffer) -> LazyBuffer:
-    self.ret = x.e(BinaryOps.MUL, x.const(1/math.log(2))).e(UnaryOps.EXP2)
+    # self.ret = x.e(BinaryOps.MUL, x.const(1/math.log(2))).e(UnaryOps.EXP2)
+    MAX_SHIFT = 62 if x.dtype is dtypes.float64 else 14 if x.dtype is dtypes.float16 else 30
+    MIN_SHIFT = -MAX_SHIFT
+    k = x.e(BinaryOps.DIV, x.const(math.log(2)))
+    k = k.e(BinaryOps.CMPLT, x.const(MIN_SHIFT)).e(TernaryOps.WHERE,  x.const(MIN_SHIFT-1), k)
+    k = x.const(MAX_SHIFT).e(BinaryOps.CMPLT, k).e(TernaryOps.WHERE,  x.const(MAX_SHIFT+1), k)
+    k = k.cast(dtypes.int)
+    abs_k = k.e(BinaryOps.CMPLT, k.const(0)).e(TernaryOps.WHERE, k.e(UnaryOps.NEG), k)
+    k_pow = k.const(1).e(BinaryOps.LSHIFT, abs_k).cast(x.dtype)
+    k_pow = abs_k.const(MAX_SHIFT).e(BinaryOps.CMPLT, abs_k).e(TernaryOps.WHERE, x.const(math.inf), k_pow)
+    y = x.e(BinaryOps.SUB, k.cast(x.dtype).e(BinaryOps.MUL, x.const(math.log(2))))
+    y_exp = term = x.const(1)
+    for i in range(1, 14):
+      term = term.e(BinaryOps.MUL, y)
+      y_exp = y_exp.e(BinaryOps.ADD, term.e(BinaryOps.MUL, x.const(1/math.factorial(i))))
+    l = x.e(BinaryOps.CMPEQ, x.const(-math.inf)).e(TernaryOps.WHERE, x.const(0), y_exp.e(BinaryOps.DIV, k_pow))
+    self.ret = x.e(BinaryOps.CMPLT, x.const(0)).e(TernaryOps.WHERE, l, y_exp.e(BinaryOps.MUL, k_pow))
     return self.ret
 
   def backward(self, grad_output:LazyBuffer) -> LazyBuffer: return self.ret.e(BinaryOps.MUL, grad_output)
